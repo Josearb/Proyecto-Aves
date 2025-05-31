@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Asignar Rol{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Asignar Rol a Usuario</h2>
+<form method="POST" action="{{ url_for('assign_role', user_id=user.id) }}">
+    <div class="mb-3">
+        <label class="form-label">Usuario</label>
+        <input type="text" class="form-control" value="{{ user.username }}" readonly>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Rol</label>
+        <select name="role" class="form-select" required>
+            <option value="user" {% if user.role == 'user' %}selected{% endif %}>Usuario</option>
+            <option value="specialist" {% if user.role == 'specialist' %}selected{% endif %}>Especialista</option>
+            <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Administrador</option>
+            <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Dependiente</option>
+        </select>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Organización</label>
+        <select name="organization_id" class="form-select" required>
+            {% for org in organizations %}
+            <option value="{{ org.id }}" {% if user.organization_id == org.id %}selected{% endif %}>{{ org.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+</form>
+{% endblock %}
