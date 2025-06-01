@@ -35,6 +35,12 @@
                         <span class="stat-value">{{ "%.2f"|format(user.birds|sum(attribute='food_required')) }} lb</span>
                         <span class="stat-label">Comida Semanal</span>
                     </div>
+                    {% if current_user.role == 'dependiente' %}
+                    <div class="stat-item">
+                        <span class="stat-value">${{ "%.2f"|format(user.birds|sum(attribute='food_required') * (food_types|selectattr('name', 'equalto', user.birds.0.food_type)|first).price_per_pound if user.birds and user.birds.0.food_type else 0) }}</span>
+                        <span class="stat-label">Costo Semanal</span>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             
@@ -49,10 +55,14 @@
                                 <th>Proceso</th>
                                 <th class="text-center">Comida/Ave</th>
                                 <th class="text-center">Total</th>
+                                {% if current_user.role == 'dependiente' %}
+                                <th class="text-center">Costo Total</th>
+                                {% endif %}
                                 <th>Actualizado</th>
                             </tr>
                         </thead>
                         <tbody>
+                            {% set total_cost = namespace(value=0) %}
                             {% for bird in user.birds %}
                             <tr>
                                 <td class="category-name">{{ bird.category.name }}</td>
@@ -64,13 +74,12 @@
                                         <select class="form-select food-type" name="food_type_{{ bird.id }}" 
                                                 data-bird-id="{{ bird.id }}" required>
                                             <option value="">Seleccionar...</option>
-                                            <option value="Maíz" {% if bird.food_type == 'Maíz' %}selected{% endif %}>Maíz</option>
-                                            <option value="Trigo" {% if bird.food_type == 'Trigo' %}selected{% endif %}>Trigo</option>
-                                            <option value="Mijo" {% if bird.food_type == 'Mijo' %}selected{% endif %}>Mijo</option>
-                                            <option value="Sorgo" {% if bird.food_type == 'Sorgo' %}selected{% endif %}>Sorgo</option>
-                                            <option value="Arroz en cáscara" {% if bird.food_type == 'Arroz en cáscara' %}selected{% endif %}>Arroz en cáscara</option>
-                                            <option value="Girasol" {% if bird.food_type == 'Girasol' %}selected{% endif %}>Girasol</option>
-                                            <option value="Alpiste" {% if bird.food_type == 'Alpiste' %}selected{% endif %}>Alpiste</option>
+                                            {% for food in food_types %}
+                                            <option value="{{ food.name }}" 
+                                                    {% if bird.food_type == food.name %}selected{% endif %}>
+                                                {{ food.name }}
+                                            </option>
+                                            {% endfor %}
                                         </select>
                                     {% endif %}
                                 </td>
@@ -100,6 +109,22 @@
                                 <td class="text-center total-food">
                                     <span class="total-badge">{{ "%.2f"|format(bird.food_required) }} lb</span>
                                 </td>
+                                {% if current_user.role == 'dependiente' %}
+                                <td class="text-center cost-cell">
+                                    {% if bird.food_type and bird.food_required %}
+                                        {% set food_type = food_types|selectattr('name', 'equalto', bird.food_type)|first %}
+                                        {% if food_type %}
+                                            {% set cost = bird.food_required * food_type.price_per_pound %}
+                                            {% set total_cost.value = total_cost.value + cost %}
+                                            ${{ "%.2f"|format(cost) }}
+                                        {% else %}
+                                            $0.00
+                                        {% endif %}
+                                    {% else %}
+                                        $0.00
+                                    {% endif %}
+                                </td>
+                                {% endif %}
                                 <td class="update-time">
                                     {% if bird.last_updated %}
                                     <span class="last-updated">{{ bird.last_updated.strftime('%d/%m/%Y %H:%M') }}</span>
@@ -109,6 +134,17 @@
                                 </td>
                             </tr>
                             {% endfor %}
+                            <!-- Fila de totales -->
+                            <tr class="total-row">
+                                {% if current_user.role == 'dependiente' %}
+                                <td colspan="5"><strong>Total General</strong></td>
+                                
+                                <td class="text-center"><strong>{{ "%.2f"|format(user.birds|sum(attribute='food_required')) }} lb</strong></td>
+                                
+                                <td class="text-center"><strong>${{ "%.2f"|format(total_cost.value) }}</strong></td>
+                                {% endif %}
+                                <td></td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -156,42 +192,42 @@
 
         <!-- Sección de Premios Obtenidos -->
         <div class="section-card awards-section">
-    <div class="section-header">
-        <h2><i class="fas fa-award"></i> Premios Obtenidos</h2>
-        <span class="badge-count">{{ user.awards|length }} premios</span>
-    </div>
-    
-    {% if user.awards %}
-    <div class="awards-container">
-        {% for award in user.awards %}
-        <div class="award-item">
-            <div class="award-icon">
-                <i class="fas fa-trophy"></i>
+            <div class="section-header">
+                <h2><i class="fas fa-award"></i> Premios Obtenidos</h2>
+                <span class="badge-count">{{ user.awards|length }} premios</span>
             </div>
-            <div class="award-details">
-                <h3>{{ award.contest_name }}</h3>
-                <div class="award-meta">
-                    <span class="award-category">{{ award.category }}</span>
-                    <span class="award-date">{{ award.award_date.strftime('%d/%m/%Y') }}</span>
-                    <span class="award-position">{{ award.position }}</span>
+            
+            {% if user.awards %}
+            <div class="awards-container">
+                {% for award in user.awards %}
+                <div class="award-item">
+                    <div class="award-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="award-details">
+                        <h3>{{ award.contest_name }}</h3>
+                        <div class="award-meta">
+                            <span class="award-category">{{ award.category }}</span>
+                            <span class="award-date">{{ award.award_date.strftime('%d/%m/%Y') }}</span>
+                            <span class="award-position">{{ award.position }}</span>
+                        </div>
+                    </div>
+                    {% if current_user.role in ['admin', 'specialist'] %}
+                    <form method="POST" action="{{ url_for('delete_award', award_id=award.id) }}" 
+                          class="delete-award-form" onsubmit="return confirm('¿Estás seguro de eliminar este premio?');">
+                        <button type="submit" class="btn-delete-award" title="Eliminar premio">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </form>
+                    {% endif %}
                 </div>
+                {% endfor %}
             </div>
-            {% if current_user.role in ['admin', 'specialist'] %}
-            <form method="POST" action="{{ url_for('delete_award', award_id=award.id) }}" 
-                  class="delete-award-form" onsubmit="return confirm('¿Estás seguro de eliminar este premio?');">
-                <button type="submit" class="btn-delete-award" title="Eliminar premio">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </form>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state">
-        <i class="fas fa-trophy"></i>
-        <p>El usuario no tiene premios registrados</p>
-    </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-trophy"></i>
+                <p>El usuario no tiene premios registrados</p>
+            </div>
             {% endif %}
         </div>
     </div>

@@ -4,6 +4,7 @@ from flask_login import UserMixin
 from sqlalchemy.orm import validates
 from datetime import datetime
 
+
 db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
@@ -80,7 +81,6 @@ class UserBirds(db.Model):
     food_per_bird = db.Column(db.Float)  # lb por ave por día (asignado por especialista)
     food_type = db.Column(db.String(50))  # Tipo de alimento (Maíz, Trigo, etc.)
     food_process = db.Column(db.String(50))  # Proceso del alimento (grano, molido, etc.)
-    last_updated = db.Column(db.DateTime)  # Fecha de última actualización
     notes = db.Column(db.Text)  # Notas adicionales sobre las aves
     export_quantity = db.Column(db.Integer, default=0)  # Cantidad para exportación
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -107,3 +107,19 @@ class UserBirds(db.Model):
         if food_per_bird is not None:
             assert food_per_bird >= 0, "Cantidad de alimento no puede ser negativa"
         return food_per_bird
+    
+class BirdFoodType(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)  # Ej: "Maíz", "Trigo"
+    price_per_pound = db.Column(db.Float, nullable=False, default=0.0)  # Precio por libra
+    is_active = db.Column(db.Boolean, default=True)  # Para desactivar tipos sin borrar
+    
+    @validates('name')
+    def validate_name(self, key, name):
+        assert len(name) >= 2, "Nombre debe tener al menos 2 caracteres"
+        return name
+    
+    @validates('price_per_pound')
+    def validate_price(self, key, price):
+        assert price >= 0, "El precio no puede ser negativo"
+        return price

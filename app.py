@@ -6,6 +6,7 @@ from flask_migrate import Migrate
 from models import db, User, BirdCategory, UserBirds, Award
 from datetime import datetime
 from sqlalchemy import func, select
+from models import db, User, BirdCategory, UserBirds, Award, BirdFoodType
 
 
 app = Flask(__name__)
@@ -284,10 +285,15 @@ def manage_user(user_id):
         flash('Usuario no asociado o no encontrado', 'danger')
         return redirect(url_for('specialist_users'))
     
+    # Obtener todos los tipos de comida activos (UNA SOLA VEZ)
+    food_types = db.session.execute(
+        select(BirdFoodType).where(BirdFoodType.is_active == True).order_by(BirdFoodType.name)
+    ).scalars().all()  # Añadir .all() para materializar los resultados
+    
     # Determinar si está en modo solo lectura (para dependientes)
     read_only = current_user.role == 'dependiente'
     
-    if request.method == 'POST' and not read_only:  # Solo especialistas pueden hacer POST
+    if request.method == 'POST' and not read_only:
         # Procesar actualizaciones de comida y nuevos campos
         for bird in user.birds:
             # Actualizar cantidad de comida
@@ -313,21 +319,21 @@ def manage_user(user_id):
         
         # Procesar nuevo premio (solo si se proporciona el nombre del concurso)
         contest_name = request.form.get('contest_name')
-        if contest_name:  # Solo procesar premios si hay un nombre de concurso
+        if contest_name:
             award_date = request.form.get('award_date')
-            position = request.form.get('position')  # Capturamos el puesto seleccionado
+            position = request.form.get('position')
             
             try:
                 award_date_obj = datetime.strptime(award_date, '%Y-%m-%d') if award_date else datetime.utcnow()
                 
-                if not position:  # Validar que se haya seleccionado un puesto
+                if not position:
                     flash('Debe seleccionar un puesto para el premio', 'danger')
                 else:
                     award = Award(
                         user_id=user_id,
                         contest_name=contest_name,
                         award_date=award_date_obj,
-                        position=position,  
+                        position=position,
                         category=request.form.get('award_category', '')
                     )
                     db.session.add(award)
@@ -348,7 +354,8 @@ def manage_user(user_id):
                          user=user,
                          current_role=current_user.role,
                          read_only=read_only,
-                         categories=db.session.execute(select(BirdCategory)).scalars())
+                         categories=db.session.execute(select(BirdCategory)).scalars().all(),  # También añade .all() aquí
+                         food_types=food_types)  # Usamos la variable ya obtenida  # Añadimos los tipos de comida al contexto
     
 # ----------- User Routes -----------
 @app.route('/profile', methods=['GET', 'POST'])
@@ -558,5 +565,77 @@ def awards_report():
     return render_template('reports/awards_report.html',
                          associates=associates,
                          now=datetime.utcnow())
+    
+# ---- Rutas para gestión de tipos de comida ----
+@app.route('/food_types', methods=['GET', 'POST'])
+@login_required
+def manage_food_types():
+    if current_user.role != 'dependiente':
+        abort(403)
+    
+    if request.method == 'POST':
+        # Procesar adición de nuevo tipo
+        name = request.form.get('food_name').strip()
+        price = float(request.form.get('price'))
+        
+        try:
+            new_food = BirdFoodType(name=name, price_per_pound=price)
+            db.session.add(new_food)
+            db.session.commit()
+            flash(f'Tipo de comida "{name}" agregado correctamente', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al agregar: {str(e)}', 'danger')
+        
+        return redirect(url_for('manage_food_types'))
+    
+    # Obtener todos los tipos de comida
+    food_types = db.session.execute(select(BirdFoodType).order_by(BirdFoodType.name)).scalars()
+    return render_template('dependiente/food_types.html', food_types=food_types)
+
+@app.route('/update_food_price/<int:food_id>', methods=['POST'])
+@login_required
+def update_food_price(food_id):
+    if current_user.role != 'dependiente':
+        abort(403)
+    
+    food = db.session.get(BirdFoodType, food_id)
+    if not food:
+        flash('Tipo de comida no encontrado', 'danger')
+        return redirect(url_for('manage_food_types'))
+    
+    try:
+        new_price = float(request.form.get('new_price'))
+        food.price_per_pound = new_price
+        db.session.commit()
+        flash(f'Precio de {food.name} actualizado a ${new_price:.2f}/lb', 'success')
+    except ValueError:
+        flash('Precio no válido', 'danger')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al actualizar: {str(e)}', 'danger')
+    
+    return redirect(url_for('manage_food_types'))
+
+@app.route('/delete_food_type/<int:food_id>', methods=['POST'])
+@login_required
+def delete_food_type(food_id):
+    if current_user.role != 'dependiente':
+        abort(403)
+    
+    food = db.session.get(BirdFoodType, food_id)
+    if not food:
+        flash('Tipo de comida no encontrado', 'danger')
+    else:
+        try:
+            db.session.delete(food)
+            db.session.commit()
+            flash('Tipo de comida eliminado correctamente', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al eliminar: {str(e)}', 'danger')
+    
+    return redirect(url_for('manage_food_types'))
+    
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
