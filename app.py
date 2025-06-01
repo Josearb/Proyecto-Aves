@@ -285,10 +285,13 @@ def manage_user(user_id):
         flash('Usuario no asociado o no encontrado', 'danger')
         return redirect(url_for('specialist_users'))
     
-    # Obtener todos los tipos de comida activos (UNA SOLA VEZ)
+    # Obtener todos los tipos de comida activos
     food_types = db.session.execute(
         select(BirdFoodType).where(BirdFoodType.is_active == True).order_by(BirdFoodType.name)
-    ).scalars().all()  # Añadir .all() para materializar los resultados
+    ).scalars().all()
+    
+    # Obtener todas las categorías de aves
+    categories = db.session.execute(select(BirdCategory)).scalars().all()
     
     # Determinar si está en modo solo lectura (para dependientes)
     read_only = current_user.role == 'dependiente'
@@ -354,7 +357,7 @@ def manage_user(user_id):
                          user=user,
                          current_role=current_user.role,
                          read_only=read_only,
-                         categories=db.session.execute(select(BirdCategory)).scalars().all(),  # También añade .all() aquí
+                         categories=categories,
                          food_types=food_types)  # Usamos la variable ya obtenida  # Añadimos los tipos de comida al contexto
     
 # ----------- User Routes -----------

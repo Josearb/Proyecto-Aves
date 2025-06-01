@@ -35,12 +35,21 @@
                         <span class="stat-value">{{ "%.2f"|format(user.birds|sum(attribute='food_required')) }} lb</span>
                         <span class="stat-label">Comida Semanal</span>
                     </div>
-                    {% if current_user.role == 'dependiente' %}
                     <div class="stat-item">
-                        <span class="stat-value">${{ "%.2f"|format(user.birds|sum(attribute='food_required') * (food_types|selectattr('name', 'equalto', user.birds.0.food_type)|first).price_per_pound if user.birds and user.birds.0.food_type else 0) }}</span>
+                        <span class="stat-value">
+                            {% if user.birds and user.birds[0].food_type %}
+                                {% set food_type = food_types|selectattr('name', 'equalto', user.birds[0].food_type)|first %}
+                                {% if food_type %}
+                                    ${{ "%.2f"|format(user.birds|sum(attribute='food_required') * food_type.price_per_pound) }}
+                                {% else %}
+                                    $0.00
+                                {% endif %}
+                            {% else %}
+                                $0.00
+                            {% endif %}
+                        </span>
                         <span class="stat-label">Costo Semanal</span>
                     </div>
-                    {% endif %}
                 </div>
             </div>
             
@@ -111,7 +120,7 @@
                                 </td>
                                 {% if current_user.role == 'dependiente' %}
                                 <td class="text-center cost-cell">
-                                    {% if bird.food_type and bird.food_required %}
+                                    {% if bird.food_type %}
                                         {% set food_type = food_types|selectattr('name', 'equalto', bird.food_type)|first %}
                                         {% if food_type %}
                                             {% set cost = bird.food_required * food_type.price_per_pound %}
@@ -136,11 +145,9 @@
                             {% endfor %}
                             <!-- Fila de totales -->
                             <tr class="total-row">
-                                {% if current_user.role == 'dependiente' %}
                                 <td colspan="5"><strong>Total General</strong></td>
-                                
                                 <td class="text-center"><strong>{{ "%.2f"|format(user.birds|sum(attribute='food_required')) }} lb</strong></td>
-                                
+                                {% if current_user.role == 'dependiente' %}
                                 <td class="text-center"><strong>${{ "%.2f"|format(total_cost.value) }}</strong></td>
                                 {% endif %}
                                 <td></td>
