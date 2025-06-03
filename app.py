@@ -293,6 +293,11 @@ def manage_user(user_id):
     # Obtener todas las categorías de aves
     categories = db.session.execute(select(BirdCategory)).scalars().all()
     
+    # Obtener nombres de concursos existentes (sin duplicados)
+    existing_contests = db.session.execute(
+        select(Award.contest_name).distinct().order_by(Award.contest_name)
+    ).scalars().all()
+    
     # Determinar si está en modo solo lectura (para dependientes)
     read_only = current_user.role == 'dependiente'
     
@@ -322,7 +327,7 @@ def manage_user(user_id):
         
         # Procesar nuevo premio (solo si se proporciona el nombre del concurso)
         contest_name = request.form.get('contest_name')
-        if contest_name:
+        if contest_name and contest_name != '__other__':
             award_date = request.form.get('award_date')
             position = request.form.get('position')
             
@@ -358,7 +363,8 @@ def manage_user(user_id):
                          current_role=current_user.role,
                          read_only=read_only,
                          categories=categories,
-                         food_types=food_types)  # Usamos la variable ya obtenida  # Añadimos los tipos de comida al contexto
+                         food_types=food_types,
+                         existing_contests=existing_contests)  # Usamos la variable ya obtenida  # Añadimos los tipos de comida al contexto
     
 # ----------- User Routes -----------
 @app.route('/profile', methods=['GET', 'POST'])

@@ -164,13 +164,23 @@
                     <h3><i class="fas fa-trophy"></i> Añadir Nuevo Premio</h3>
                     <div class="award-form-fields">
                         <div class="form-group">
-                            <input type="text" class="form-control" name="contest_name" placeholder="Nombre del concurso">
+                            <select class="form-control select-with-add" name="contest_name" id="contest_name_select" required>
+                                <option value="" selected disabled>Seleccione un concurso</option>
+                                {% for contest in existing_contests %}
+                                <option value="{{ contest }}">{{ contest }}</option>
+                                {% endfor %}
+                                <option value="__other__">Otro (Agregar nuevo)</option>
+                            </select>
+                            <div id="new_contest_container" style="display: none; margin-top: 10px;">
+                                <input type="text" class="form-control" id="new_contest_input" placeholder="Nombre del nuevo concurso">
+                                <button type="button" class="btn btn-sm btn-primary mt-2" id="add_contest_btn">Agregar</button>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <input type="date" class="form-control" name="award_date" >
+                            <input type="date" class="form-control" name="award_date">
                         </div>
                         <div class="form-group">
-                            <select class="form-select" name="award_category" >
+                            <select class="form-select" name="award_category">
                                 <option value="" selected disabled>Categoría del premio</option>
                                 {% for category in categories %}
                                 <option value="{{ category.name }}">{{ category.name }}</option>
@@ -255,6 +265,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 processSelect.disabled = false;
             }
         });
+    });
+
+    // Manejar el select de concursos con opción para agregar nuevos
+    const contestSelect = document.getElementById('contest_name_select');
+    const newContestContainer = document.getElementById('new_contest_container');
+    const newContestInput = document.getElementById('new_contest_input');
+    const addContestBtn = document.getElementById('add_contest_btn');
+
+    contestSelect.addEventListener('change', function() {
+        if (this.value === '__other__') {
+            newContestContainer.style.display = 'block';
+            this.required = false;
+        } else {
+            newContestContainer.style.display = 'none';
+            this.required = true;
+        }
+    });
+
+    addContestBtn.addEventListener('click', function() {
+        const newContestName = newContestInput.value.trim();
+        if (newContestName) {
+            // Agregar la nueva opción al select
+            const newOption = document.createElement('option');
+            newOption.value = newContestName;
+            newOption.textContent = newContestName;
+            newOption.selected = true;
+            
+            // Insertar antes de la opción "Otro"
+            contestSelect.insertBefore(newOption, contestSelect.lastChild);
+            
+            // Limpiar y ocultar
+            newContestInput.value = '';
+            newContestContainer.style.display = 'none';
+            contestSelect.required = true;
+        }
     });
 });
 </script>
