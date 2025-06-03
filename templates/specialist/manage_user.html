@@ -145,9 +145,9 @@
                             {% endfor %}
                             <!-- Fila de totales -->
                             <tr class="total-row">
+                                {% if current_user.role == 'dependiente' %}
                                 <td colspan="5"><strong>Total General</strong></td>
                                 <td class="text-center"><strong>{{ "%.2f"|format(user.birds|sum(attribute='food_required')) }} lb</strong></td>
-                                {% if current_user.role == 'dependiente' %}
                                 <td class="text-center"><strong>${{ "%.2f"|format(total_cost.value) }}</strong></td>
                                 {% endif %}
                                 <td></td>
