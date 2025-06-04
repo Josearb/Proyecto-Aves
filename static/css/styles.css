@@ -2427,16 +2427,3 @@
     cursor: pointer !important;
 }
 
-.delivery-check-section {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #f8f9fa;
-    border-radius: 5px;
-    border-left: 4px solid #28a745;
-}
-
-.delivery-check-section .form-check-label {
-    font-weight: bold;
-    color: #28a745;
-    margin-left: 5px;
-}
